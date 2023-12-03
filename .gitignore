@@ -1,4 +1,7 @@
 
+# Ignore where I put my input files
+*/input.txt
+
 # Common CMake build directories
 build*/
 !build2/
