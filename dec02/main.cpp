@@ -1,8 +1,6 @@
 
 #include "../aoc.hpp"
 
-#include "../extern/ctre.hpp"
-
 namespace {
 
 using namespace std::string_view_literals;
@@ -16,17 +14,21 @@ struct game {
 
 auto parse_draw = [](std::string_view draw) -> game
 {
-    game g{};
-    for (auto [match, n, colour] : ctre::range<R"(\s*(\d+) (\w+),?)">(draw)) {
-        if (colour == "red"sv) {
-            g.red = n.to_number();
-        } else if (colour == "green"sv) {
-            g.green = n.to_number();
-        } else if (colour == "blue"sv) {
-            g.blue = n.to_number();
-        }
-    }
-    return g;
+    return flux::split_string(draw, ", "sv)
+                .fold([](game g, std::string_view pair) {
+                    auto space = pair.find(' ');
+                    int n = aoc::try_parse<int>(pair.substr(0, space)).value();
+                    auto colour = pair.substr(space + 1);
+
+                    if (colour == "red"sv) {
+                        g.red = n;
+                    } else if (colour == "green"sv) {
+                        g.green = n;
+                    } else if (colour == "blue"sv) {
+                        g.blue = n;
+                    }
+                    return g;
+                }, game{});
 };
 
 auto merge_draws = [](game lhs, game rhs) -> game {
@@ -39,19 +41,23 @@ auto merge_draws = [](game lhs, game rhs) -> game {
 
 auto parse_line = [](std::string_view line) -> game
 {
-    auto [match, id, draws] = ctre::match<R"(^Game (\d+): (.*)$)">(line);
+    auto colon = line.find(':');
 
-    game g = flux::split_string(draws, ';')
+    auto left = line.substr(5, colon); // Remove "Game "
+    auto right = line.substr(colon + 2); // Remove ": "
+
+    game g = flux::split_string(right, "; "sv)
                  .map(parse_draw)
                  .fold(merge_draws, game{});
 
-    g.id = id.to_number();
+    g.id = aoc::try_parse<int>(left).value();
     return g;
 };
 
 auto parse_input = [](std::string_view input) -> std::vector<game>
 {
     return flux::split_string(input, '\n')
+                .filter([](std::string_view line) { return !line.empty(); })
                 .map(parse_line)
                 .to<std::vector>();
 };

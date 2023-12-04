@@ -1,5 +1,6 @@
 
-#pragma once
+#ifndef AOC_HPP_INCLUDED
+#define AOC_HPP_INCLUDED
 
 #include <array>
 #include <cassert>
@@ -106,3 +107,5 @@ private:
 };
 
 }
+
+#endif
