@@ -9,3 +9,7 @@ target_precompile_headers(dec01 PRIVATE aoc.hpp)
 
 add_executable(dec02 dec02/main.cpp)
 target_precompile_headers(dec02 PRIVATE aoc.hpp)
+
+add_executable(dec04 dec04/main.cpp)
+target_precompile_headers(dec04 PRIVATE aoc.hpp)
+
