@@ -18,3 +18,6 @@ target_precompile_headers(dec04 PRIVATE aoc.hpp)
 
 add_executable(dec05 dec05/main.cpp)
 target_precompile_headers(dec05 PRIVATE aoc.hpp)
+
+add_executable(dec06 dec06/main.cpp)
+target_precompile_headers(dec06 PRIVATE aoc.hpp)

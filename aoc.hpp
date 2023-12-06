@@ -79,6 +79,12 @@ const auto try_parse = [](flux::sequence auto&& f) -> std::optional<I> {
     return res;
 };
 
+template <std::integral I>
+constexpr auto parse = [](flux::sequence auto&& seq) -> I
+{
+    return try_parse<I>(FLUX_FWD(seq)).value();
+};
+
 template <typename T>
 constexpr auto vector_from_file = [](char const* path)
 {
