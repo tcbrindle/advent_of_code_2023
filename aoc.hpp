@@ -19,6 +19,7 @@
 #define FMT_HEADER_ONLY
 #include "extern/fmt/format.h"
 #include "extern/fmt/chrono.h"
+#include "extern/fmt/ranges.h"
 
 namespace aoc {
 
