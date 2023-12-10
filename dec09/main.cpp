@@ -3,8 +3,6 @@
 
 namespace {
 
-auto difference = [](int a, int b) { return b - a; };
-
 auto parse_input = [](std::string_view input) -> std::vector<std::vector<int>>
 {
     return flux::split_string(input, '\n')
@@ -15,29 +13,23 @@ auto parse_input = [](std::string_view input) -> std::vector<std::vector<int>>
               .to<std::vector>();
 };
 
-constexpr auto recurse_down(std::vector<int> const& seq) -> int
-{
-    auto differences = flux::pairwise_map(flux::ref(seq), difference).to<std::vector>();
-
-    if (flux::all(differences, flux::pred::eq(0))) {
-        return 0;
-    } else {
-        return recurse_down(differences) + differences.back();
-    }
-}
-
 auto part1 = [](std::vector<std::vector<int>> const& input) -> int
 {
     return flux::ref(input)
-            .map([](std::vector<int> const& nums) {
-                return recurse_down(nums) + nums.back();
+            .map([](std::vector<int> vec) {
+                    for (auto i : flux::ints(1, vec.size()).reverse()) {
+                        for (auto j : flux::ints(0, i)) {
+                            vec.at(j) = vec.at(j+1)  - vec.at(j);
+                        }
+                    }
+                    return flux::sum(vec);
             })
             .sum();
 };
 
 auto part2 = [](std::vector<std::vector<int>> input) -> int
 {
-    flux::mut_ref(input).for_each(flux::inplace_reverse);
+    flux::for_each(input, flux::inplace_reverse);
     return part1(input);
 };
 
