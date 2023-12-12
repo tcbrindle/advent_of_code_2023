@@ -11211,7 +11211,10 @@ private:
         bounds_t<Base> next;
         bool trailing_empty = false;
 
-        friend bool operator==(cursor_type const&, cursor_type const&) = default;
+        friend constexpr bool operator==(cursor_type const& lhs, cursor_type const& rhs)
+        {
+            return lhs.cur == rhs.cur && lhs.trailing_empty == rhs.trailing_empty;
+        }
     };
 
     static constexpr auto find_next(auto& self, auto const& from)
@@ -11266,6 +11269,12 @@ public:
         } else {
             cur.trailing_empty = false;
         }
+    }
+
+    static constexpr auto last(auto& self) -> cursor_type
+        requires bounded_sequence<decltype((self.base_))>
+    {
+        return cursor_type{flux::last(self.base_)};
     }
 };
 
