@@ -18,29 +18,32 @@ auto parse_input = [](std::string_view input) -> std::vector<grid_t>
             .to<std::vector>();
 };
 
-auto reflection_idx = [](flux::bidirectional_sequence auto seq, i64 ignore) -> i64
+template <i64 RequiredDiffs>
+auto find_reflection_idx = [](flux::sequence auto seq) -> i64
 {
-    for (auto idx : flux::ints(1, flux::size(seq))) {
-        if (idx == ignore) {
-            continue;
-        }
-        flux::sequence auto top = flux::slice(seq, 0, idx).reverse();
-        flux::sequence auto bottom = flux::slice(seq, idx, flux::last);
+    auto idx = flux::ints(1, flux::size(seq)).find_if([&seq](i64 idx) {
+        auto top = flux::slice(seq, 0, idx).reverse().flatten();
+        auto bottom = flux::slice(seq, idx, flux::last).flatten();
 
-        auto [a, b] = flux::zip_find_if(std::not_fn(flux::equal), top, bottom);
+        // Use for_each_while so we can bail out if we find too many diffs
+        i64 diffs = 0;
+        flux::zip_for_each_while([&diffs](char a, char b) {
+            diffs += (a != b);
+            return diffs <= RequiredDiffs;
+        }, std::move(top), std::move(bottom));
 
-        if (top.is_last(a) || bottom.is_last(b)) {
-            return idx;
-        }
-    }
-    return 0;
+        return diffs == RequiredDiffs;
+    });
+
+    return idx == flux::size(seq) ? 0 : idx;
 };
 
-auto find_reflection = [](grid_t const& grid, i64 ignore = 0) -> i64 {
+template <i64 RequiredDiffs>
+auto find_reflection = [](grid_t const& grid) -> i64 {
 
-    auto horiz = reflection_idx(flux::ref(grid), ignore/100);
-    if (horiz != 0) {
-        return 100 * horiz;
+    auto horiz_idx = find_reflection_idx<RequiredDiffs>(flux::ref(grid));
+    if (horiz_idx != 0) {
+        return 100 * horiz_idx;
     }
 
     auto columns = flux::ints(0, flux::size(grid.at(0)))
@@ -49,39 +52,17 @@ auto find_reflection = [](grid_t const& grid, i64 ignore = 0) -> i64 {
                                      .map([y](auto const& str) { return str.at(y); });
                     });
 
-    return reflection_idx(flux::ref(columns), ignore);
+    return find_reflection_idx<RequiredDiffs>(std::move(columns));
 };
 
 auto part1 = [](std::vector<grid_t> const& input) -> i64
 {
-    return flux::ref(input).map(find_reflection).sum();
-};
-
-auto find_smudge = [](grid_t grid) -> i64
-{
-    auto flip = [](char& c) { c == '.' ? c = '#' : c = '.'; };
-
-    // Let's just try brute force
-    auto height = flux::size(grid);
-    auto width = flux::size(grid.at(0));
-    auto old_r = find_reflection(grid);
-
-    for (auto [x, y] : flux::cartesian_product(flux::ints(0, width),
-                                               flux::ints(0, height))) {
-        flip(grid.at(y).at(x));
-        auto r = find_reflection(grid, old_r);
-        if (r > 0) {
-            return r;
-        }
-        flip(grid.at(y).at(x));
-    }
-
-    throw std::runtime_error("Could not find smudge location!");
+    return flux::ref(input).map(find_reflection<0>).sum();
 };
 
 auto part2 = [](std::vector<grid_t> const& input) -> i64
 {
-    return flux::ref(input).map(find_smudge).sum();
+    return flux::ref(input).map(find_reflection<1>).sum();
 };
 
 constexpr auto& test_data =
