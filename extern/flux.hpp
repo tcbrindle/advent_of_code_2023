@@ -3642,6 +3642,8 @@ public:
         using value_type = value_t<Base>;
 
         static constexpr auto first(auto& self) -> cursor_type
+            requires bidirectional_sequence<decltype((self.base_))> &&
+                     bounded_sequence<decltype((self.base_))>
         {
             return cursor_type(flux::last(self.base_));
         }
