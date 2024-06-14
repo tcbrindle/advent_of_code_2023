@@ -1,7 +1,7 @@
 
-#include "../aoc.hpp"
+#include <charconv>
 
-#include <complex>
+#include "../aoc.hpp"
 
 namespace {
 
@@ -57,9 +57,9 @@ auto calculate_area = [](std::string_view input) -> i64
         .fold([](state s, std::string_view line) -> state {
              auto [p1, area] = s;
              auto [diff, len] = ParseFn(line);
-             auto p2 = last_pos + diff;
+             auto p2 = p1 + diff;
 
-             area += len + (p1.x * p2.y - p1.x * p2.y);
+             area += len + (p1.x * p2.y - p2.x * p1.y);
 
              return {p2, area};
          }, state{}).second;
