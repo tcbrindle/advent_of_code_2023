@@ -14,12 +14,11 @@
 #include <tuple>
 #include <vector>
 
-#include "extern/flux.hpp"
+#include <flux.hpp>
 
-#define FMT_HEADER_ONLY
-#include "extern/fmt/format.h"
-#include "extern/fmt/chrono.h"
-#include "extern/fmt/ranges.h"
+#include <fmt/format.h>
+#include <fmt/chrono.h>
+#include <fmt/ranges.h>
 
 namespace aoc {
 
