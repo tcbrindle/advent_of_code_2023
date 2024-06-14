@@ -1,7 +1,7 @@
 
 #include "../aoc.hpp"
 
-#include "../extern/ctre.hpp"
+#include <ctre.hpp>
 
 namespace {
 
@@ -66,7 +66,7 @@ auto parse_workflows = [](std::string_view str) -> workflows_map
 
 auto parse_parts = [](std::string_view str) -> std::vector<part>
 {
-    constexpr auto& regex = ctre::range<R"(\{x=(\d+),m=(\d+),a=(\d+),s=(\d+)\})">;
+    constexpr auto& regex = ctre::search_all<R"(\{x=(\d+),m=(\d+),a=(\d+),s=(\d+)\})">;
 
     return flux::from_crange(regex(str))
             .filter(std::identity{})
