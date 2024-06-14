@@ -64,7 +64,7 @@ auto parse_input = [](std::string_view input) -> module_map
                 }
             }();
 
-            module mod{.kind = kind};
+            auto mod = module{.kind = kind};
             auto arrow = line.find(" -> ");
             mod.name = std::string(line.substr(0, arrow));
             mod.dests = flux::split_string(line.substr(arrow + 4), ", ")
