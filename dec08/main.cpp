@@ -3,6 +3,8 @@
 
 #include <numeric>
 
+#include <ankerl/unordered_dense.h>
+
 namespace {
 
 using i64 = std::int64_t;
@@ -12,7 +14,7 @@ struct node {
     std::string right;
 };
 
-using node_map = std::unordered_map<std::string, node>;
+using node_map = ankerl::unordered_dense::map<std::string, node>;
 
 auto parse_input = [](std::string_view input) -> std::pair<std::string, node_map>
 {
@@ -55,7 +57,7 @@ auto part1 = [](std::string_view instructions, node_map const& nodes) -> i64
 
 auto part2 = [](std::string_view instructions, node_map const& nodes) -> i64
 {
-    return  flux::from_range(nodes)
+    return  flux::from_crange(nodes)
                 .map(&node_map::value_type::first)
                 .filter([](std::string_view s) { return s.back() == 'A'; })
                 .map([&](std::string const& from) {

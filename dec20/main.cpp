@@ -4,6 +4,8 @@
 #include <numeric>
 #include <queue>
 
+#include <ankerl/unordered_dense.h>
+
 namespace {
 
 enum class pulse_kind : bool { lo, hi };
@@ -43,10 +45,10 @@ struct module {
     std::string name;
     std::vector<std::string> dests;
     bool state = false;
-    std::unordered_map<std::string, pulse_kind> inputs;
+    ankerl::unordered_dense::map<std::string, pulse_kind> inputs;
 };
 
-using module_map = std::unordered_map<std::string, module>;
+using module_map = ankerl::unordered_dense::map<std::string, module>;
 
 auto parse_input = [](std::string_view input) -> module_map
 {

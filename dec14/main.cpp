@@ -1,6 +1,8 @@
 
 #include "../aoc.hpp"
 
+#include <ankerl/unordered_dense.h>
+
 namespace {
 
 using i64 = std::int64_t;
@@ -90,7 +92,7 @@ auto roll_grid = [](grid2d& grid)
 
 auto part2 = [](grid2d grid) -> i64
 {
-    std::unordered_map<std::string, i64> states;
+    ankerl::unordered_dense::map<std::string, i64> states;
     states[grid.data] = 0;
 
     i64 loop_entry = -1;

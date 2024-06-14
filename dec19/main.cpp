@@ -1,6 +1,7 @@
 
 #include "../aoc.hpp"
 
+#include <ankerl/unordered_dense.h>
 #include <ctre.hpp>
 
 namespace {
@@ -19,7 +20,7 @@ struct workflow {
     std::string fallback;
 };
 
-using workflows_map = std::unordered_map<std::string, workflow>;
+using workflows_map = ankerl::unordered_dense::map<std::string, workflow>;
 
 using part = std::array<int, 4>;
 
