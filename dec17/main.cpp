@@ -57,126 +57,130 @@ auto parse_input = [](std::string_view input) -> grid2d
     };
 };
 
-auto get_neighbours = [](grid2d const& grid, position const pos, direction const dir)
-    -> flux::sequence auto
+template <typename G>
+concept Graph =
+    std::regular<typename G::node_type> &&
+    std::regular<typename G::distance_type> &&
+    std::totally_ordered<typename G::distance_type> &&
+    requires (G const& g, typename G::node_type n) {
+        { g.neighbours(n) } -> flux::sequence; // of pair<node_type, distance_type>
+        { g.should_exit(n) } -> std::same_as<bool>;
+    };
+
+auto dijkstra =
+[]<Graph G>(G const& graph, G::node_type start)
+    -> std::map<typename G::node_type, typename G::distance_type>
 {
-    std::vector<std::tuple<position, direction, int>> out;
-    for (uint8_t d : flux::ints(0, 4)) {
-        if (flux::pred::even(d) == flux::pred::even(int(dir))) {
-            continue;
-        }
+    using node_t = G::node_type;
+    using dist_t = G::distance_type;
+    using queue_t = std::priority_queue<
+                        std::pair<dist_t, node_t>,
+                        std::vector<std::pair<dist_t, node_t>>,
+                        std::greater<>>;
+    using map_t = std::map<node_t, dist_t>;
 
-        direction n{d};
+    queue_t queue{};
+    map_t dists;
 
-        for (int i : flux::ints(1, 4)) {
-            int weight = 0;
-            auto next_pos = pos;
-            bool in_bounds = true;
-
-            for (int k : flux::ints(1, i + 1)) {
-                next_pos = next_pos + n;
-                if (!grid.in_bounds(next_pos)) {
-                    in_bounds = false;
-                    break;
-                }
-
-                weight += grid[pos];
-            }
-
-            if (in_bounds) {
-                out.push_back({next_pos, n, weight});
-            }
-        }
-    }
-
-    return out;
-};
-
-struct State {
-    position pos;
-    direction dir;
-    bool operator==(State const&) const = default;
-    auto operator<=>(State const&) const = default;
-};
-
-auto part1 = [](grid2d const& grid) -> int
-{
-    std::priority_queue<std::pair<int, State>,
-                        std::vector<std::pair<int, State>>,
-                        std::greater<>> queue;
-
-    queue.push({0, State{position{0, 0}, direction::south}});
-    queue.push({0, State{position{0, 0}, direction::east}});
-
-    std::map<State, int> dists;
-    dists[{{0, 0}, direction::south}] = 0;
-    dists[{{0, 0}, direction::east}] = 0;
+    queue.push({0, start});
+    dists[start] = dist_t{};
 
     while (!queue.empty()) {
-        auto const [_, state] = queue.top();
+        auto [_, current] = queue.top();
         queue.pop();
 
-        if (state.pos == position{grid.width - 1, grid.height - 1}) {
+        if (graph.should_exit(current)) {
             break;
         }
 
-        for (auto [next_pos, next_dir, next_weight] : get_neighbours(grid, state.pos, state.dir)) {
+        dist_t current_dist= dists.find(current)->second;
 
-            auto next_dist = dists[state] + next_weight;
-            auto next_state = State{next_pos, next_dir};
-
-            if (auto iter = dists.find(next_state);
-                iter == dists.end() || next_dist < iter->second) {
-                dists[next_state] = next_dist;
-                queue.push({next_dist, next_state});
+        for (auto const& [next_node, next_dist] : graph.neighbours(current)) {
+            dist_t new_dist = dists[current] + next_dist;
+            if (auto iter = dists.find(next_node); iter == dists.cend() || new_dist < iter->second) {
+                dists[next_node] = new_dist;
+                queue.push({new_dist, next_node});
             }
         }
     }
 
-    auto iter = std::ranges::find_if(dists, [&grid](auto const& pair) {
-        return pair.first.pos == position{grid.width - 1, grid.height - 1};
-    });
-    return iter->second;
+    return dists;
 };
-#if 0
-auto part2 = [](grid2d const& grid) -> int
+
+template <i64 MinDist, i64 MaxDist>
+struct crucible_graph {
+    grid2d const& grid;
+
+    struct node_type {
+        position pos{};
+        flux::optional<direction> dir;
+
+        bool operator==(node_type const&) const = default;
+        auto operator<=>(node_type const&) const = default;
+    };
+
+    using distance_type = i64;
+
+    auto neighbours(node_type const& n) const
+       -> std::vector<std::pair<node_type, distance_type>>
+    {
+        std::vector<std::pair<node_type, distance_type>> out;
+
+        auto next_dirs =
+            flux::ints(0, 4)
+              .filter([&](i64 d) {
+                if (n.dir.has_value()) {
+                    return flux::pred::even(d) != flux::pred::even(int(*n.dir));
+                } else {
+                    return true;
+                }
+              })
+              .map([](i64 d) { return static_cast<direction>(d); });
+
+        for (direction next_dir : next_dirs) {
+            auto next_pos = n.pos;
+            auto cost = 0;
+
+            for (auto i : flux::ints(1, MaxDist + 1)) {
+                next_pos = next_pos + next_dir;
+                if (!grid.in_bounds(next_pos)) {
+                    break;
+                }
+                cost += grid[next_pos];
+                if (i >= MinDist) {
+                    out.emplace_back(
+                        node_type{.pos = next_pos, .dir = flux::optional(next_dir)}, cost);
+                }
+            }
+        }
+
+        return out;
+    }
+
+    auto should_exit(node_type const& n) const -> bool
+    {
+        return n.pos == position{grid.width - 1, grid.height - 1};
+    }
+};
+
+template <int MinDist, int MaxDist>
+auto calculate = [](grid2d const& grid) -> i64
 {
-    std::priority_queue<std::pair<int, State>,
-                        std::vector<std::pair<int, State>>,
-                        std::greater<>> queue;
+    crucible_graph<MinDist, MaxDist> graph{grid};
 
-    queue.push({0, State{position{0, 0}, direction{99}, 0}});
-    std::map<State, int> dists;
-    dists[{{0, 0}, direction{99}, 0}] = 0;
+    auto dists = dijkstra(graph, {.pos = {0, 0}});
 
-    while (!queue.empty()) {
-        auto const [_, state] = queue.top();
-        queue.pop();
-
-        for (auto [next_pos, next_dir] : get_neighbours(grid, state.pos)) {
-            int consec = next_dir == state.dir ? state.consec + 1 : 0;
-            if (consec >= 10) {
-                continue;
-            }
-
-            auto next_dist = dists[state] + grid[next_pos];
-            auto next_state = State{next_pos, next_dir, consec};
-
-            if (auto iter = dists.find(next_state);
-                iter == dists.end() || next_dist < iter->second) {
-                dists[next_state] = next_dist;
-                queue.push({next_dist, next_state});
-            }
-        }
-    }
-
-    auto iter = std::ranges::find_if(dists, [&grid](auto const& pair) {
-        return pair.first.pos == position{grid.width - 1, grid.height - 1} &&
-               pair.first.consec >= 0;
-    });
-    return iter->second;
+    return flux::from_crange(dists)
+        .filter([&grid](auto const& pair) {
+            return pair.first.pos == position{grid.width - 1, grid.height - 1};
+        })
+        .map([](auto const& pair) { return pair.second; })
+        .min()
+        .value();
 };
-#endif
+
+auto const part1 = calculate<1, 3>;
+auto const part2 = calculate<4, 10>;
 
 constexpr auto& test_data =
 R"(2413432311323
@@ -191,14 +195,16 @@ R"(2413432311323
 4564679986453
 1224686865563
 2546548887735
-4322674655533)";
+4322674655533
+)";
 
 constexpr auto& test_data2 =
 R"(111111111111
 999999999991
 999999999991
 999999999991
-999999999991)";
+999999999991
+)";
 
 }
 
@@ -207,7 +213,10 @@ int main(int argc, char** argv)
     {
         auto const test_grid = parse_input(test_data);
         fmt::println("Part 1 test: {}", part1(test_grid));
-    //    fmt::println("Part 2 test: {}", part2(test_grid));
+        fmt::println("Part 2 test: {}", part2(test_grid));
+
+        auto const test_grid2 = parse_input(test_data2);
+        fmt::println("Part 2 test2: {}", part2(test_grid2));
     }
 
     if (argc < 2) {
@@ -218,5 +227,5 @@ int main(int argc, char** argv)
     auto const grid = parse_input(aoc::string_from_file(argv[1]));
 
     fmt::println("Part 1: {}", part1(grid));
-  //  fmt::println("Part 2: {}", part2(grid));
+    fmt::println("Part 2: {}", part2(grid));
 }
