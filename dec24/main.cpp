@@ -5,26 +5,58 @@ namespace {
 
 using i64 = std::int64_t;
 
-struct vec3 {
-    i64 x, y, z;
+template <typename T>
+struct vec3_t {
+    T x, y, z;
 
-    auto operator==(vec3 const&) const -> bool = default;
+    friend auto operator==(vec3_t const&, vec3_t const&) -> bool = default;
+
+    friend constexpr auto operator+(vec3_t const& lhs, vec3_t const& rhs) -> vec3_t
+    {
+        return {lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
+    }
+
+    friend constexpr auto operator-(vec3_t const& lhs, vec3_t const& rhs) -> vec3_t
+    {
+        return {lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
+    }
+
+    friend constexpr auto operator*(T const& s, vec3_t const& vec) -> vec3_t
+    {
+        return {s * vec.x, s * vec.y, s * vec.z};
+    }
 };
 
+template <typename T>
+constexpr auto dot(vec3_t<T> const& a, vec3_t<T> const& b) -> T
+{
+    return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
+}
+
+template <typename T>
+constexpr auto cross(vec3_t<T> const& a, vec3_t<T> const& b) -> vec3_t<T>
+{
+    return {.x = (a.y * b.z) - (a.z * b.y),
+            .y = (a.z * b.x) - (a.x * b.z),
+            .z = (a.x * b.y) - (a.y * b.x)};
+}
+
+using dvec3 = vec3_t<double>;
+
 struct hailstone {
-    vec3 position;
-    vec3 velocity;
+    dvec3 position;
+    dvec3 velocity;
 
     auto operator==(hailstone const&) const -> bool = default;
 };
 
-auto parse_vec3 = [](std::string_view str) -> vec3 {
+auto parse_vec3 = [](std::string_view str) -> dvec3 {
     auto seq =  flux::split_string(str, ',')
                    .filter(std::not_fn(flux::is_empty))
                    .map(aoc::parse<i64>);
     auto pos = seq.first();
-    return vec3{
-        .x = seq[pos], .y = seq[seq.inc(pos)], .z = seq[seq.inc(pos)]
+    return dvec3{
+        .x = double(seq[pos]), .y = double(seq[seq.inc(pos)]), .z = double(seq[seq.inc(pos)])
     };
 };
 
@@ -43,8 +75,8 @@ auto parse_input = [](std::string_view input) -> std::vector<hailstone>
 template <i64 Min, i64 Max>
 auto will_intersect = [](hailstone const& h1, hailstone const& h2) -> bool
 {
-    auto a = double(h1.velocity.y)/h1.velocity.x;
-    auto b = double(h2.velocity.y)/h2.velocity.x;
+    auto a = h1.velocity.y/h1.velocity.x;
+    auto b = h2.velocity.y/h2.velocity.x;
 
     if (a == b) {
         // Lines are parallel
@@ -84,6 +116,30 @@ auto count_intersections = [](std::vector<hailstone> const& input) -> i64
 
 auto part1 = count_intersections<200000000000000, 400000000000000>;
 
+// This solution was entirely taken from a Reddit post by user /u/DaveBaum. Thanks, Dave!
+// https://www.reddit.com/r/adventofcode/comments/18pnycy/2023_day_24_solutions/kxqjg33/
+auto part2 = [](std::vector<hailstone> const& input) -> i64
+{
+    auto& h0 = input.at(0);
+    auto& h1 = input.at(1);
+    auto& h2 = input.at(2);
+
+    auto p1 = h1.position - h0.position;
+    auto v1 = h1.velocity - h0.velocity;
+    auto p2 = h2.position - h0.position;
+    auto v2 = h2.velocity - h0.velocity;
+
+    auto t1 = -dot(cross(p1, p2), v2)/dot(cross(v1, p2), v2);
+    auto t2 = -dot(cross(p1, p2), v1)/dot(cross(p1, v2), v1);
+
+    auto c1 = h1.position + (t1 * h1.velocity);
+    auto c2 = h2.position + (t2 * h2.velocity);
+
+    auto v = (1.0/(t2 - t1)) *  (c2 - c1);
+    auto p = c1 - (t1 * v);
+
+    return i64(p.x + p.y + p.z);
+};
 
 constexpr auto& test_data =
 R"(19, 13, 30 @ -2,  1, -2
@@ -94,7 +150,8 @@ R"(19, 13, 30 @ -2,  1, -2
 
 static_assert([]{
     auto const stones = parse_input(test_data);
-    return count_intersections<7, 27>(stones) == 2;
+    return count_intersections<7, 27>(stones) == 2 &&
+           part2(stones) == 47;
 }());
 
 }
@@ -109,4 +166,5 @@ int main(int argc, char** argv)
     auto const stones = parse_input(aoc::string_from_file(argv[1]));
 
     fmt::println("Part 1: {}", part1(stones));
+    fmt::println("Part 2: {}", part2(stones));
 }
